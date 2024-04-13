@@ -1,5 +1,5 @@
 import requests
-from typing import Type
+from typing import Type, List
 from pydantic import BaseModel
 from utils import generate_json_schema
 
@@ -8,8 +8,8 @@ APP_ENDPOINT = "http://0.0.0.0:8000"
 
 class Employee(BaseModel):
     name: str
-    company: str
     position: str
+    products: List[str]
 
 
 def scrape_url(
