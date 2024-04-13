@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from loguru import logger
+from logs import logger
 
 from schema import ScrapperPayload
 
