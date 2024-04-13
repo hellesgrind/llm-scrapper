@@ -1,23 +1,34 @@
 import requests
-from typing import Type
+from typing import Type, List
 from pydantic import BaseModel
-from utils import generate_json_schema
+from utils import prepare_schema
 
 APP_ENDPOINT = "http://0.0.0.0:8000"
 
 
+class Position(BaseModel):
+    position_name: str
+    company_name: str
+
+
+class Education(BaseModel):
+    school_name: str
+
+
 class Employee(BaseModel):
     name: str
-    position: str
 
 
 def scrape_url(
     url: str,
-    scrapper_schema: Type[BaseModel],
+    scrapper_schemas: List[Type[BaseModel]],
 ):
+    schemas = []
+    for schema in scrapper_schemas:
+        schemas.append(prepare_schema(schema))
     payload = {
         "url": url,
-        "scrapper_schema": generate_json_schema(scrapper_schema),
+        "scrapper_schemas": schemas,
     }
     requests.post(
         url=f"{APP_ENDPOINT}/scrapper",
@@ -27,6 +38,6 @@ def scrape_url(
 
 if __name__ == "__main__":
     scrape_url(
-        url="https://www.apple.com/leadership/",
-        scrapper_schema=Employee,
+        url="https://www.apple.com/leadership/craig-federighi/",
+        scrapper_schemas=[Employee, Position, Education],
     )
