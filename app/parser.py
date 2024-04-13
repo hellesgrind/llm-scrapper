@@ -1,20 +1,23 @@
 from typing import List
 
-import requests
+import aiohttp
 from bs4 import BeautifulSoup
 
 
 class Page:
-    def __init__(self, url: str):
+    def __init__(self, url: str, title: str, body_text: str, links: List[str]):
         self.url = url
-        self.title: str | None = None
-        self.body_text: str | None = None
-        self.links: List[str] | None = None
+        self.title = title
+        self.body_text = body_text
+        self.links = links
 
-    def parse(self):
-        response = requests.get(self.url)
-        response.raise_for_status()
-        soup = BeautifulSoup(response.text, "html.parser")
+    @classmethod
+    async def parse(cls, url):
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                text = await response.text()
+        soup = BeautifulSoup(text, "html.parser")
         annotated_links = []
 
         if soup.title:
@@ -34,6 +37,10 @@ class Page:
                 annotated_links.append(link_text)
             else:
                 annotated_links.append(element.text)
-        self.title = title
-        self.body_text = body_text
-        self.links = annotated_links
+        self = cls(
+            url=url,
+            title=title,
+            body_text=body_text,
+            links=annotated_links,
+        )
+        return self
