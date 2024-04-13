@@ -1,7 +1,7 @@
 from pydantic import BaseModel
-from typing import Dict
+from typing import List, Dict
 
 
 class ScrapperPayload(BaseModel):
     url: str
-    scrapper_schema: Dict
+    scrapper_schemas: List[Dict]
