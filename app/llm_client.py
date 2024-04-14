@@ -3,7 +3,6 @@ from openai import AsyncOpenAI
 from typing import List, Dict
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
 OPENAI_CLIENT = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
 
