@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 import os
-from neo4j import AsyncGraphDatabase
+from neo4j import AsyncGraphDatabase, AsyncSession
 
 from schema import (
     NodeInfo,
@@ -11,6 +11,17 @@ NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 NEO4J_URI = os.getenv("NEO4J_URI")
 NEO4J_DB_NAME = os.getenv("NEO4J_DB_NAME")
+
+neo4j_driver = AsyncGraphDatabase.driver(
+    uri=NEO4J_URI,
+    auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
+    database=NEO4J_DB_NAME,
+)
+
+
+async def neo4j_session() -> AsyncSession:
+    async with neo4j_driver.session() as session:
+        yield session
 
 
 # TODO: Implement 'search_entity'
@@ -38,12 +49,11 @@ class Neo4jIntegration(DatabaseIntegration):
     MERGE (f)-[:{edge_type} {{source: $edgeSource}}]-(t)
     """  # noqa: W291
 
-    def __init__(self):
-        self.driver = AsyncGraphDatabase.driver(
-            uri=NEO4J_URI,
-            auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
-            database=NEO4J_DB_NAME,
-        )
+    def __init__(
+        self,
+        db_session: AsyncSession,
+    ):
+        self.db_session = db_session
 
     async def add_node(self, node_info: NodeInfo):
         node_properties = []
@@ -57,11 +67,10 @@ class Neo4jIntegration(DatabaseIntegration):
         )
         params = node_info.properties
         params["source"] = node_info.source
-        async with self.driver.session() as session:
-            await session.run(
-                query=query,
-                parameters=params,
-            )
+        await self.db_session.run(
+            query=query,
+            parameters=params,
+        )
 
     async def add_edge(self, edge_info: EdgeInfo):
         query = self.add_edge_query.format(
@@ -69,13 +78,12 @@ class Neo4jIntegration(DatabaseIntegration):
             fromUUID=f"'{edge_info.from_uuid}'",
             toUUID=f"'{edge_info.to_uuid}'",
         )
-        async with self.driver.session() as session:
-            await session.run(
-                query=query,
-                parameters={
-                    "edgeSource": edge_info.source,
-                },
-            )
+        await self.db_session.run(
+            query=query,
+            parameters={
+                "edgeSource": edge_info.source,
+            },
+        )
 
     def get_all_nodes(self, node_type):
         pass
