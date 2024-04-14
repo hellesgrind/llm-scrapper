@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 import os
 from neo4j import AsyncGraphDatabase, AsyncSession
 
+from logs import logger
 from schema import (
     NodeInfo,
     EdgeInfo,
@@ -48,6 +49,10 @@ class Neo4jIntegration(DatabaseIntegration):
     MATCH (f {{uuid: {fromUUID}}}), (t {{uuid: {toUUID}}})
     MERGE (f)-[:{edge_type} {{source: $edgeSource}}]-(t)
     """  # noqa: W291
+    get_all_nodes_query: str = """
+    MATCH (n: {node_type})
+    RETURN n as nodes
+    """
 
     def __init__(
         self,
@@ -85,5 +90,8 @@ class Neo4jIntegration(DatabaseIntegration):
             },
         )
 
-    def get_all_nodes(self, node_type):
-        pass
+    async def get_all_nodes(self, node_type):
+        query = self.get_all_nodes_query.format(node_type=node_type)
+        result = await self.db_session.run(query)
+        result = await result.data()
+        logger.debug(f"existing nodes: {result}")
