@@ -1,8 +1,11 @@
 from abc import ABC, abstractmethod
 import os
-from neo4j import GraphDatabase
+from neo4j import AsyncGraphDatabase
 
-from logs import logger
+from schema import (
+    NodeInfo,
+    EdgeInfo,
+)
 
 NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
@@ -10,60 +13,72 @@ NEO4J_URI = os.getenv("NEO4J_URI")
 NEO4J_DB_NAME = os.getenv("NEO4J_DB_NAME")
 
 
-# TODO: Implement 'search_entity' and
-#  relationship ingestion
+# TODO: Implement 'search_entity'
 class DatabaseIntegration(ABC):
 
     @abstractmethod
-    def add_entity(self, entity_type, data):
+    def add_node(self, data):
         pass
 
     @abstractmethod
-    def get_entity(self, entity_type, entity_id):
+    def add_edge(self, data):
         pass
 
     @abstractmethod
-    def get_all_entities(self, entity_type):
-        pass
-
-    @abstractmethod
-    def update_entity(self, entity_type, entity_id, data):
-        pass
-
-    @abstractmethod
-    def delete_entity(self, entity_type, entity_id):
+    def get_all_nodes(self, node_type):
         pass
 
 
 class Neo4jIntegration(DatabaseIntegration):
+    add_node_query: str = """ 
+    MERGE (n:{node_type} {{uuid: {uuid}, source: $source, {properties} }})
+    """  # noqa: W291
+    add_edge_query: str = """
+    MATCH (f {{uuid: {fromUUID}}}), (t {{uuid: {toUUID}}})
+    MERGE (f)-[:{edge_type} {{source: $edgeSource}}]-(t)
+    """  # noqa: W291
+
     def __init__(self):
-        self.driver = GraphDatabase.driver(
+        self.driver = AsyncGraphDatabase.driver(
             uri=NEO4J_URI,
             auth=(NEO4J_USERNAME, NEO4J_PASSWORD),
             database=NEO4J_DB_NAME,
         )
-        self._test_connection()
 
-    def _test_connection(self):
-        with self.driver.session() as session:
-            try:
-                session.run("RETURN 1")
-                logger.info("Neo4j database connected successfully!")
-            except ValueError as ve:
-                logger.error(f"Neo4j database: {ve}")
-                raise
+    async def add_node(self, node_info: NodeInfo):
+        node_properties = []
+        for property_name in node_info.properties.keys():
+            node_properties.append(f"{property_name}: ${property_name}")
+        node_properties = ", ".join(node_properties)
+        query = self.add_node_query.format(
+            node_type=node_info.type,
+            uuid=f"'{node_info.uuid}'",
+            properties=node_properties,
+            # properties=", ".join(
+            #     f"{k}: ${k}" for k in node_info.properties.keys(),
+            # ),
+        )
+        params = node_info.properties
+        params["source"] = node_info.source
+        async with self.driver.session() as session:
+            await session.run(
+                query=query,
+                parameters=params,
+            )
 
-    def add_entity(self, entity_type, data):
-        pass
+    async def add_edge(self, edge_info: EdgeInfo):
+        query = self.add_edge_query.format(
+            edge_type=edge_info.type,
+            fromUUID=f"'{edge_info.from_uuid}'",
+            toUUID=f"'{edge_info.to_uuid}'",
+        )
+        async with self.driver.session() as session:
+            await session.run(
+                query=query,
+                parameters={
+                    "edgeSource": edge_info.source,
+                },
+            )
 
-    def get_entity(self, entity_type, entity_id):
-        pass
-
-    def get_all_entities(self, entity_type):
-        pass
-
-    def update_entity(self, entity_type, entity_id, data):
-        pass
-
-    def delete_entity(self, entity_type, entity_id):
+    def get_all_nodes(self, node_type):
         pass
