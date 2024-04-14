@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from logs import logger
 
 from database import Neo4jIntegration
 from schema import ScrapperPayload
@@ -17,8 +16,6 @@ data_manager = DataManager(db_integration=db_integration)
 
 @app.post("/scrapper")
 async def scrapper(payload: ScrapperPayload):
-    logger.info(payload.url)
-    logger.info(payload.scrapper_schemas)
     pipeline = ScrapperPipeline(
         model=scrapper_model,
         scrapper_schemas=payload.scrapper_schemas,
