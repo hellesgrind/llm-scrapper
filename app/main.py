@@ -11,6 +11,7 @@ from data_manager import DataManager
 app = FastAPI()
 
 scrapper_model = OpenAIModel(model_name="gpt-3.5-turbo")
+data_manager_model = OpenAIModel(model_name="gpt-3.5-turbo")
 
 
 @app.post("/scrapper")
@@ -18,7 +19,10 @@ async def scrapper(
     payload: ScrapperPayload, db_session: AsyncSession = Depends(neo4j_session)
 ):
     db_integration = Neo4jIntegration(db_session=db_session)
-    data_manager = DataManager(db_integration=db_integration)
+    data_manager = DataManager(
+        db_integration=db_integration,
+        model=data_manager_model,
+    )
     pipeline = ScrapperPipeline(
         model=scrapper_model,
         scrapper_schemas=payload.scrapper_schemas,
