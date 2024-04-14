@@ -16,7 +16,8 @@ from schema import (
 class ResponseProcessor:
 
     def process(self, response: str, page_data: Page) -> PageGraph:
-        logger.info("Start processing response")
+        logger.info(f"Start processing response")
+        logger.debug(f"{response}")
         response_data = json.loads(response)
         nodes = self.create_nodes(
             response_data=response_data,
