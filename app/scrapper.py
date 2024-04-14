@@ -7,8 +7,8 @@ from logs import logger
 from parser import Page
 from prompts import scrape_page_prompt
 from schema import (
-    Node,
-    Edge,
+    PageNode,
+    PageEdge,
     PageGraph,
 )
 
@@ -16,7 +16,7 @@ from schema import (
 class ResponseProcessor:
 
     def process(self, response: str, page_data: Page) -> PageGraph:
-        logger.info(f"Start processing response:{response}")
+        logger.info("Start processing response")
         response_data = json.loads(response)
         nodes = self.create_nodes(
             response_data=response_data,
@@ -33,11 +33,11 @@ class ResponseProcessor:
     def create_nodes(
         response_data: Dict,
         page_data: Page,
-    ) -> List[Node]:
-        nodes: List[Node] = []
+    ) -> List[PageNode]:
+        nodes: List[PageNode] = []
         nodes_data = response_data.get("nodes", [])
         if not nodes_data:
-            logger.info(
+            logger.warning(
                 f"Unable to get 'nodes' from response: {response_data}",
             )
             return nodes
@@ -49,25 +49,24 @@ class ResponseProcessor:
                     f"Unable to get 'temp_id' or 'node_type' of node: {data}"
                 )
                 continue
-            node = Node(
+            node = PageNode(
                 temp_id=temp_id,
                 node_type=node_type,
                 properties=data,
                 source=page_data.url,
             )
             nodes.append(node)
-            logger.info(f"Extracted 'node': {node}")
         return nodes
 
     @staticmethod
     def create_edges(
         response_data: Dict,
         page_data: Page,
-    ) -> List[Edge]:
-        edges: List[Edge] = []
+    ) -> List[PageEdge]:
+        edges: List[PageEdge] = []
         edges_data = response_data.get("relationships", [])
         if not edges_data:
-            logger.info(
+            logger.warning(
                 f"Unable to get 'edges' from response: {response_data}",
             )
             return edges
@@ -80,13 +79,12 @@ class ResponseProcessor:
                     f"or 'from_temp_id' of edge: {data}"
                 )
                 continue
-            edge = Edge(
+            edge = PageEdge(
                 from_temp_id=from_temp_id,
                 to_temp_id=to_temp_id,
                 source=page_data.url,
             )
             edges.append(edge)
-            logger.info(f"Extracted 'edge': {edge}")
         return edges
 
 
@@ -103,8 +101,6 @@ class PageScrapper:
     async def scrape_page(self, page: Page) -> PageGraph:
         logger.info(f"Start scrapping page: {page.url}")
         page_text = page.body_text
-        logger.info(page_text)
-        logger.info(self.scrapper_schemas)
         messages = [
             {
                 "role": "user",
@@ -117,7 +113,7 @@ class PageScrapper:
         response_data = self.response_processor.process(
             response=response, page_data=page
         )
-        logger.info(f"Parsed page: {page.url}\n{response_data}")
+        logger.info(f"Scrapped page: {page.url}\n{response_data}")
         return response_data
 
     # TODO:
@@ -145,3 +141,4 @@ class ScrapperPipeline:
     async def run(self, url: str):
         page = await Page.parse(url)
         response_data = await self.scrapper.scrape_page(page)
+        await self.data_manager.insert_data(response_data)
