@@ -38,6 +38,7 @@ class DataManager:
         existing_nodes = await self.db_integration.get_all_nodes(
             node_type=node.node_type,
         )
+        pass
 
     # TODO:
     async def check_if_node_exist(self, node: PageNode):
