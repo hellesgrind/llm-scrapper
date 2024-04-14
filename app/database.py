@@ -54,9 +54,6 @@ class Neo4jIntegration(DatabaseIntegration):
             node_type=node_info.type,
             uuid=f"'{node_info.uuid}'",
             properties=node_properties,
-            # properties=", ".join(
-            #     f"{k}: ${k}" for k in node_info.properties.keys(),
-            # ),
         )
         params = node_info.properties
         params["source"] = node_info.source
