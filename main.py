@@ -6,19 +6,6 @@ from utils import prepare_schema
 APP_ENDPOINT = "http://0.0.0.0:8000"
 
 
-class Position(BaseModel):
-    position_name: str
-    company_name: str
-
-
-class Education(BaseModel):
-    school_name: str
-
-
-class Employee(BaseModel):
-    name: str
-
-
 def scrape_url(
     url: str,
     scrapper_schemas: List[Type[BaseModel]],
@@ -34,6 +21,19 @@ def scrape_url(
         url=f"{APP_ENDPOINT}/scrapper",
         json=payload,
     )
+
+
+class Position(BaseModel):
+    position_name: str
+    company_name: str
+
+
+class Education(BaseModel):
+    school_name: str
+
+
+class Employee(BaseModel):
+    name: str
 
 
 if __name__ == "__main__":
